@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: bd_inventario
+    restart: unless-stopped
+    environment:
+      # Contraseña del usuario root:
+      MYSQL_ROOT_PASSWORD: password
+
+      # Creamos base de datos inicial:
+      MYSQL_DATABASE: bd_inventario
+
+      # Creamos un usuario regular distinto de root:
+      MYSQL_USER: usuario_api
+      MYSQL_PASSWORD: password_api
+    ports:
+      - "3306:3306"
+    networks:
+      - red_inventario
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+networks:
+  red_inventario:
+    external: true
