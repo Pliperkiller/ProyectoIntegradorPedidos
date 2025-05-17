@@ -39,7 +39,7 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
         return true;
     }
 
-    private boolean validarIngredientes(Pedido pedido) {
+    public boolean validarIngredientes(Pedido pedido) {
         Map<Long, Integer> ingredientesRequeridos = calcularIngredientesRequeridos(pedido);
 
         for (Map.Entry<Long, Integer> entry : ingredientesRequeridos.entrySet()) {
