@@ -7,17 +7,17 @@ from src.application.usecases.get_order_usecase_impl import GetOrderUsecaseImpl
 from src.application.usecases.update_order_usecase_impl import UpdateOrderUsecaseImpl
 from src.application.services.order_service import OrderService
 from src.domain.exceptions.invalid_order_data_exception import InvalidOrderDataException
+from src.domain.ports.output.message_broker import MessageBroker
 from typing_extensions import override
-from src.infrastructure.adapters.message_broker.rabbitmq_message_broker import RabbitMQMessageBroker
+
 
 class OrderServiceImpl(OrderService):
     def __init__(self,
                  order_repository: OrderRepository,
                  order_item_repository: OrderItemRepository,
-                 product_repository: ProductRepository):
-        
-        rabbitmq_url = "amqp://guest:guest@rabbitmq:5672/"
-        message_broker = RabbitMQMessageBroker(rabbitmq_url)
+                 product_repository: ProductRepository,
+                 message_broker: MessageBroker
+                 ):
 
         self.create_order_usecase = CreateOrderUsecaseImpl(order_repository,
                                                             order_item_repository,
