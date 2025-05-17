@@ -2,7 +2,10 @@ package com.micro.inventario.infrastructure.adapters.in.rabbitmq;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class PedidoMessage {
+    @JsonProperty("orderId")
     private Long orderId;
     private List<ItemMessage> items;
 
@@ -23,6 +26,7 @@ public class PedidoMessage {
     }
 
     public static class ItemMessage {
+        @JsonProperty("product_id")
         private Long productId;
         private int amount;
 

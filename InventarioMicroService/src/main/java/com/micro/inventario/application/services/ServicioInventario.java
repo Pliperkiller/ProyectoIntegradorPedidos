@@ -67,13 +67,10 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
 
     private Map<Long, Integer> calcularIngredientesRequeridos(Pedido pedido) {
         Map<Long, Integer> ingredientesRequeridos = new HashMap<Long, Integer>();
-
         for (ItemPedido item : pedido.getItems()) {
             Optional<Producto> productoModel = obtenerProductoPort.ObtenerProductoPorId(item.getIdProducto());
-
             if (productoModel.isPresent()) {
                 Producto producto = productoModel.get();
-
                 for (Map.Entry<Long, Integer> ingredienteReceta : producto.getReceta().getIngredientes().entrySet()) {
                     Long idIngrediente = ingredienteReceta.getKey();
                     int cantidadPorProducto = ingredienteReceta.getValue();

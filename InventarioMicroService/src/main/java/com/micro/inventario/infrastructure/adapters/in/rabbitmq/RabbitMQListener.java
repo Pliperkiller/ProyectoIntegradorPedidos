@@ -24,17 +24,18 @@ public class RabbitMQListener {
     @RabbitListener(queues = "order_items_queue")
     public void listen(String message) {
         try {
-            // Convertir el mensaje JSON a un objeto Pedido
+            System.out.println("Mensaje recibido: " + message);
             PedidoMessage pedidoMessage = objectMapper.readValue(message, PedidoMessage.class);
+            pedidoMessage.getItems().forEach(item -> System.out.println("Item recibido: productId=" + item.getProductId() + ", amount=" + item.getAmount()));
 
-            // Convertir los items del mensaje a objetos ItemPedido
             List<ItemPedido> items = pedidoMessage.getItems().stream()
                     .map(item -> new ItemPedido(item.getProductId(), item.getAmount()))
                     .collect(Collectors.toList());
+            
+            items.forEach(item -> System.out.println("ItemPedido creado: productId=" + item.getIdProducto() + ", amount=" + item.getCantidad()));
 
             Pedido pedido = new Pedido(pedidoMessage.getOrderId(), items);
 
-            // Validar los ingredientes del pedido
             boolean valid = servicioInventario.validarIngredientes(pedido);
 
             if (valid) {
