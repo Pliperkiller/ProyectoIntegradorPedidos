@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Servicio para el microservicio de pedidos
+  pedidos_app:
+    build:
+      context: ./PedidosMicroService
+      dockerfile: Dockerfile
+    container_name: pedidos_microservice_app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@pedidos_db:5432/pedidos_db
+    depends_on:
+      - pedidos_db
+      - rabbitmq
+    networks:
+      - red_global
+    command: flask run --host=0.0.0.0 --port=5000
+
+  # Base de datos para el microservicio de pedidos
+  pedidos_db:
+    image: postgres:14
+    container_name: pedidos_microservice_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pedidos_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pedidos_postgres_data:/var/lib/postgresql/data
+    networks:
+      - red_global
+
+  # RabbitMQ para el microservicio de pedidos
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pedidos_microservice_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - red_global
+
+  # Servicio para el microservicio de inventario
+  inventario_app:
+    build:
+      context: ./InventarioMicroService
+      dockerfile: Dockerfile
+    container_name: inventario_microservice_app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://inventario_db:3306/bd_inventario?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: usuario_api
+      SPRING_DATASOURCE_PASSWORD: password_api
+    depends_on:
+      - inventario_db
+    networks:
+      - red_global
+
+  # Base de datos para el microservicio de inventario
+  inventario_db:
+    image: mysql:8
+    container_name: inventario_microservice_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: bd_inventario
+      MYSQL_USER: usuario_api
+      MYSQL_PASSWORD: password_api
+    ports:
+      - "3306:3306"
+    volumes:
+      - inventario_mysql_data:/var/lib/mysql
+    networks:
+      - red_global
+
+volumes:
+  pedidos_postgres_data:
+  inventario_mysql_data:
+
+networks:
+  red_global:
+    driver: bridge

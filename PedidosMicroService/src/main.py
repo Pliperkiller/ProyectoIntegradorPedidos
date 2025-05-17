@@ -6,6 +6,7 @@ from src.infrastructure.database.models.table_base_model import db
 from src.application.services.order_service_impl import OrderServiceImpl
 from src.infrastructure.entrypoints.rest.flask.order_endpoints import OrderEndpoints
 from src.infrastructure.entrypoints.rest.controllers.order_controller import OrderController
+from src.infrastructure.adapters.message_broker.rabbitmq_message_broker import RabbitMQMessageBroker
 
 
 def create_app():
@@ -17,10 +18,12 @@ def create_app():
     order_repository = PgOrderRepository()
     product_repository = PgProductRepository()
     order_item_repository = PgOrderItemRepository()
+    message_broker = RabbitMQMessageBroker(app.config['RABBITMQ_URL'])
 
     order_service = OrderServiceImpl(order_repository = order_repository,
                                      product_repository = product_repository, 
-                                     order_item_repository = order_item_repository)
+                                     order_item_repository = order_item_repository,
+                                     message_broker=message_broker)
     order_controller = OrderController(order_service)
     order_endpoints = OrderEndpoints(order_controller)
 

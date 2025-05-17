@@ -44,6 +44,6 @@ class CreateOrderUsecaseImpl(CreateOrderUsecase):
         for item in items:
             self.order_item_repository.create(created_order.id,item)
 
-        self.message_broker.publish("order_items_queue", {"items": order_items})
+        self.message_broker.publish("order_items_queue", {"orderId": created_order.id,"items": order_items})
 
         return order

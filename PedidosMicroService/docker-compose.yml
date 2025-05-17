@@ -11,12 +11,12 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/pedidos_db
     depends_on:
-      - db
+      - db_pedidos
     volumes:
       - .:/app
     command: flask run --host=0.0.0.0 --port=5000
 
-  db:
+  db_pedidos:
     image: postgres:14
     container_name: pedidos_microservice_db
     environment:
