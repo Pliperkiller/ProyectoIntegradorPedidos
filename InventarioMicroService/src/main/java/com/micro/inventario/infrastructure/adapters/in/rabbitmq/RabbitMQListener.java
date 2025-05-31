@@ -40,6 +40,8 @@ public class RabbitMQListener {
 
             if (valid) {
                 System.out.println("Ingredientes válidos para el pedido: " + pedido.getId());
+                servicioInventario.procesarPedido(pedido);
+                servicioInventario.confirmarPedido(pedido.getId());
             } else {
                 System.out.println("Ingredientes insuficientes para el pedido: " + pedido.getId());
             }
