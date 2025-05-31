@@ -32,8 +32,6 @@ public class RabbitMQListener {
                     .map(item -> new ItemPedido(item.getProductId(), item.getAmount()))
                     .collect(Collectors.toList());
             
-            items.forEach(item -> System.out.println("ItemPedido creado: productId=" + item.getIdProducto() + ", amount=" + item.getCantidad()));
-
             Pedido pedido = new Pedido(pedidoMessage.getOrderId(), items);
 
             boolean valid = servicioInventario.validarIngredientes(pedido);
@@ -44,6 +42,7 @@ public class RabbitMQListener {
                 servicioInventario.confirmarPedido(pedido.getId());
             } else {
                 System.out.println("Ingredientes insuficientes para el pedido: " + pedido.getId());
+                servicioInventario.rechazarPedido(pedido.getId());
             }
         } catch (Exception e) {
             System.err.println("Error al procesar el mensaje: " + e.getMessage());

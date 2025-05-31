@@ -46,7 +46,18 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
     public void confirmarPedido(Long orderId) {
         Map<String, Object> message = new HashMap<>();
         message.put("orderId", orderId);
-        message.put("status", "CONFIRMADO");
+        message.put("status", 1);
+
+        String queueName = "order_confirmation_queue";
+        messageBroker.publish(queueName, message);
+
+        System.out.println("Evento publicado: " + message);
+    }
+
+    public void rechazarPedido(Long orderId) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("orderId", orderId);
+        message.put("status", 0);
 
         String queueName = "order_confirmation_queue";
         messageBroker.publish(queueName, message);

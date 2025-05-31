@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+
+  # RabbitMQ para el microservicio de pedidos
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pedidos_microservice_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - red_global
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmqctl status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Servicio para el microservicio de pedidos
   pedidos_app:
     build:
@@ -12,11 +31,34 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pedidos_db:5432/pedidos_db
     depends_on:
-      - pedidos_db
-      - rabbitmq
+      pedidos_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - red_global
     command: flask run --host=0.0.0.0 --port=5000
+
+
+  # Servicio para el microservicio de inventario
+  inventario_app:
+    build:
+      context: ./InventarioMicroService
+      dockerfile: Dockerfile
+    container_name: inventario_microservice_app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://inventario_db:3306/bd_inventario?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: usuario_api
+      SPRING_DATASOURCE_PASSWORD: password_api
+    depends_on:
+      inventario_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - red_global
 
   # Base de datos para el microservicio de pedidos
   pedidos_db:
@@ -32,36 +74,11 @@ services:
       - pedidos_postgres_data:/var/lib/postgresql/data
     networks:
       - red_global
-
-  # RabbitMQ para el microservicio de pedidos
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: pedidos_microservice_rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    networks:
-      - red_global
-
-  # Servicio para el microservicio de inventario
-  inventario_app:
-    build:
-      context: ./InventarioMicroService
-      dockerfile: Dockerfile
-    container_name: inventario_microservice_app
-    ports:
-      - "8081:8081"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://inventario_db:3306/bd_inventario?allowPublicKeyRetrieval=true&useSSL=false
-      SPRING_DATASOURCE_USERNAME: usuario_api
-      SPRING_DATASOURCE_PASSWORD: password_api
-    depends_on:
-      - inventario_db
-    networks:
-      - red_global
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Base de datos para el microservicio de inventario
   inventario_db:
@@ -79,6 +96,11 @@ services:
       - inventario_mysql_data:/var/lib/mysql
     networks:
       - red_global
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u usuario_api -ppassword_api"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pedidos_postgres_data:
