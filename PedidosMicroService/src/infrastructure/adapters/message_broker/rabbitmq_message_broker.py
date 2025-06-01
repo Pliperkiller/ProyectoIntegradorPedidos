@@ -11,7 +11,6 @@ class RabbitMQMessageBroker(MessageBroker):
         connection = pika.BlockingConnection(pika.URLParameters(self.rabbitmq_url))
         channel = connection.channel()
 
-        # Declara la cola (asegura que exista)
         channel.queue_declare(queue=queue_name, durable=True)
 
         # Publica el mensaje
@@ -19,7 +18,7 @@ class RabbitMQMessageBroker(MessageBroker):
             exchange='',
             routing_key=queue_name,
             body=json.dumps(message),
-            properties=pika.BasicProperties(delivery_mode=2)  # Mensaje persistente
+            properties=pika.BasicProperties(delivery_mode=2)
         )
 
         connection.close()

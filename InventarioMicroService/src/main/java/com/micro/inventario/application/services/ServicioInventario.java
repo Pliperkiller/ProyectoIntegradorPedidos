@@ -9,6 +9,8 @@ import com.micro.inventario.domain.entities.Ingrediente;
 import com.micro.inventario.domain.entities.ItemPedido;
 import com.micro.inventario.domain.entities.Pedido;
 import com.micro.inventario.domain.entities.Producto;
+import com.micro.inventario.domain.ports.output.MessageBroker;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,13 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
     private final ObtenerProductoPort obtenerProductoPort;
     private final ObtenerIngredientePort obtenerIngredientePort;
     private final ActualizarInventarioPort actualizarInventarioPort;
+    private final MessageBroker messageBroker;
 
-    public ServicioInventario(ObtenerProductoPort obtenerProductoPort, ObtenerIngredientePort obtenerIngredientePort, ActualizarInventarioPort actualizarInventarioPort) {
+    public ServicioInventario(ObtenerProductoPort obtenerProductoPort, ObtenerIngredientePort obtenerIngredientePort, ActualizarInventarioPort actualizarInventarioPort, MessageBroker messageBroker) {
         this.obtenerProductoPort = obtenerProductoPort;
         this.obtenerIngredientePort = obtenerIngredientePort;
         this.actualizarInventarioPort = actualizarInventarioPort;
+        this.messageBroker = messageBroker;
     }
 
     @Override
@@ -37,6 +41,28 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
         }
         actualizarInventario(pedido);
         return true;
+    }
+
+    public void confirmarPedido(Long orderId) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("orderId", orderId);
+        message.put("status", 1);
+
+        String queueName = "order_confirmation_queue";
+        messageBroker.publish(queueName, message);
+
+        System.out.println("Evento publicado: " + message);
+    }
+
+    public void rechazarPedido(Long orderId) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("orderId", orderId);
+        message.put("status", 0);
+
+        String queueName = "order_confirmation_queue";
+        messageBroker.publish(queueName, message);
+
+        System.out.println("Evento publicado: " + message);
     }
 
     public boolean validarIngredientes(Pedido pedido) {
@@ -82,5 +108,7 @@ public class ServicioInventario implements ProcesarPedidoUseCase {
         }
         return ingredientesRequeridos;
     }
+
+
 
 }

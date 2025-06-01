@@ -1,3 +1,5 @@
+import threading
+
 from flask import Flask
 from src.config import Config
 from src.infrastructure.database.models import *
@@ -7,8 +9,20 @@ from src.application.services.order_service_impl import OrderServiceImpl
 from src.infrastructure.entrypoints.rest.flask.order_endpoints import OrderEndpoints
 from src.infrastructure.entrypoints.rest.controllers.order_controller import OrderController
 from src.infrastructure.adapters.message_broker.rabbitmq_message_broker import RabbitMQMessageBroker
+from src.infrastructure.adapters.message_listener.rabbitmq_message_listener import RabbitMQMessageListener
 
 
+def start_message_listener(message_listener: RabbitMQMessageListener, queue_name: str):
+    def run_listener():
+        try:
+            print(f"Starting message listener for queue: {queue_name}")
+            message_listener.listen(queue_name)
+        except Exception as e:
+            print(f"Error en el hilo del listener: {e}")
+    listener_thread = threading.Thread(target=run_listener)
+    listener_thread.daemon = True
+    listener_thread.start()
+    
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -19,11 +33,16 @@ def create_app():
     product_repository = PgProductRepository()
     order_item_repository = PgOrderItemRepository()
     message_broker = RabbitMQMessageBroker(app.config['RABBITMQ_URL'])
+    
 
     order_service = OrderServiceImpl(order_repository = order_repository,
                                      product_repository = product_repository, 
                                      order_item_repository = order_item_repository,
                                      message_broker=message_broker)
+    
+    message_listener = RabbitMQMessageListener(app.config['RABBITMQ_URL'], order_service, app)
+    start_message_listener(message_listener, "order_confirmation_queue")
+
     order_controller = OrderController(order_service)
     order_endpoints = OrderEndpoints(order_controller)
 

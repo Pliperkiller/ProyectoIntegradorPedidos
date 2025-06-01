@@ -9,6 +9,11 @@ public class RabbitMQQueueConfig {
 
     @Bean
     public Queue orderItemsQueue() {
-        return new Queue("order_items_queue", true); // Cola durable
+        return new Queue("order_items_queue", true);
+    }
+
+    @Bean
+    public Queue orderConfirmationQueue() {
+        return new Queue("order_confirmation_queue", true);
     }
 }
