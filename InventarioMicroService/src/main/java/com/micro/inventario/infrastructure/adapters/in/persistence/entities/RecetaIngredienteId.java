@@ -29,4 +29,11 @@ public class RecetaIngredienteId implements Serializable {
         return Objects.hash(receta, ingrediente);
     }
 
+    public Long getReceta() {
+        return receta;
+    }
+
+    public Long getIngrediente() {
+        return ingrediente;
+    }
 }

@@ -37,10 +37,10 @@ public class InventarioPersistenceAdapter implements ObtenerProductoPort, Obtene
     @Override
     public Optional<Producto> ObtenerProductoPorId(Long id) {
         return repositorioProducto.findById(id)
-                .map(productoEntity -> {
+                .flatMap(productoEntity -> {
                     RecetaEntity recetaEntity = repositorioReceta.findByProductoId(id);
                     if (recetaEntity == null) {
-                        return null;
+                        return Optional.empty();
                     }
 
                     List<RecetaIngredienteEntity> recetaIngredientes =
@@ -52,7 +52,8 @@ public class InventarioPersistenceAdapter implements ObtenerProductoPort, Obtene
                     }
 
                     Receta receta = new Receta(recetaEntity.getId(), id, ingredientes);
-                    return new Producto(id, productoEntity.getNombre(), receta);
+                    Producto producto = new Producto(id, productoEntity.getNombre(), receta);
+                    return Optional.of(producto);
                 });
     }
 
