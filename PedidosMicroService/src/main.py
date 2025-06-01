@@ -12,14 +12,17 @@ from src.infrastructure.adapters.message_broker.rabbitmq_message_broker import R
 from src.infrastructure.adapters.message_listener.rabbitmq_message_listener import RabbitMQMessageListener
 
 
-def start_message_listener(message_listener : RabbitMQMessageListener, queue_name :str):
+def start_message_listener(message_listener: RabbitMQMessageListener, queue_name: str):
     def run_listener():
-        print(f"Starting message listener for queue: {queue_name}")
-        message_listener.listen(queue_name)
+        try:
+            print(f"Starting message listener for queue: {queue_name}")
+            message_listener.listen(queue_name)
+        except Exception as e:
+            print(f"Error en el hilo del listener: {e}")
     listener_thread = threading.Thread(target=run_listener)
     listener_thread.daemon = True
     listener_thread.start()
-
+    
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -37,12 +40,11 @@ def create_app():
                                      order_item_repository = order_item_repository,
                                      message_broker=message_broker)
     
-    message_listener = RabbitMQMessageListener(app.config['RABBITMQ_URL'], order_service)
+    message_listener = RabbitMQMessageListener(app.config['RABBITMQ_URL'], order_service, app)
     start_message_listener(message_listener, "order_confirmation_queue")
 
     order_controller = OrderController(order_service)
     order_endpoints = OrderEndpoints(order_controller)
-
 
     app.register_blueprint(order_endpoints.blueprint, url_prefix='/api/v1')
 

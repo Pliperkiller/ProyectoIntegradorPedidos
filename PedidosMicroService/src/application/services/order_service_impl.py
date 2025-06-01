@@ -23,9 +23,12 @@ class OrderServiceImpl(OrderService):
                                                             order_item_repository,
                                                             product_repository,
                                                             message_broker)
+        
         self.delete_order_usecase = DeleteOrderUseCaseImpl(order_repository,
                                                             order_item_repository)
+        
         self.get_order_usecase = GetOrderUsecaseImpl(order_repository)
+
         self.update_order_usecase = UpdateOrderUsecaseImpl(order_repository)
 
     @override
@@ -35,7 +38,8 @@ class OrderServiceImpl(OrderService):
 
         for item in order_items:
             if item["amount"] <= 0:
-                raise InvalidOrderDataException(f"Invalid amount: {item['amount']} for product {item['product_id']}")
+                error_message = f"Invalid amount: {item['amount']} for product {item['product_id']}"
+                raise InvalidOrderDataException(error_message)
             
         return self.create_order_usecase.create_order(client_id, order_items)
     
