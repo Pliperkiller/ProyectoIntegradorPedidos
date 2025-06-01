@@ -17,11 +17,11 @@ public class PedidoResponse {
         this.pedidoId = pedidoId;
     }
 
-    public String getMensage() {
+    public String getMensaje() {
         return mensage;
     }
 
-    public void setMensage(String mensage) {
+    public void setMensaje(String mensage) {
         this.mensage = mensage;
     }
 }

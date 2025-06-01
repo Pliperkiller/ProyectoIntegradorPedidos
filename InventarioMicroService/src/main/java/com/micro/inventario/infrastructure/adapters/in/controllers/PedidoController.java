@@ -28,6 +28,10 @@ public class PedidoController {
 
     @PostMapping("/procesar")
     public ResponseEntity<PedidoResponse> procesarPedido(@RequestBody PedidoRequest pedidoRequest) {
+        if (pedidoRequest.getItems() == null) {
+            return ResponseEntity.badRequest().body(new PedidoResponse(null, "Inventario insuficiente"));
+        }
+        
         List<ItemPedido> items = pedidoRequest.getItems().stream()
                 .map(item -> new ItemPedido(Long.valueOf(item.getIdProducto()), item.getCantidad()))
                 .collect(Collectors.toList());
@@ -41,7 +45,6 @@ public class PedidoController {
         } else {
             return ResponseEntity.badRequest().body(new PedidoResponse(null, "Inventario insuficiente"));
         }
-
     }
 
     @GetMapping("/status")
