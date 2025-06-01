@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   # RabbitMQ para el microservicio de pedidos
@@ -21,25 +19,23 @@ services:
       retries: 5
 
   # Servicio para el microservicio de pedidos
-  # pedidos_app:
-  #   build:
-  #     context: ./PedidosMicroService
-  #     dockerfile: Dockerfile
-  #   container_name: pedidos_microservice_app
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     - DATABASE_URL=postgresql://postgres:postgres@pedidos_db:5432/pedidos_db
-  #   depends_on:
-  #     pedidos_db:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     inventario_app:
-  #       condition: service_healthy
-  #   networks:
-  #     - red_global
-  #   command: flask run --host=0.0.0.0 --port=5000
+  pedidos_app:
+    build:
+      context: ./PedidosMicroService
+      dockerfile: Dockerfile
+    container_name: pedidos_microservice_app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@pedidos_db:5432/pedidos_db
+    depends_on:
+      pedidos_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - red_global
+    command: flask run --host=0.0.0.0 --port=5000
 
 
   # Servicio para el microservicio de inventario
@@ -61,11 +57,7 @@ services:
         condition: service_healthy
     networks:
       - red_global
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
 
   # Base de datos para el microservicio de pedidos
   pedidos_db:
