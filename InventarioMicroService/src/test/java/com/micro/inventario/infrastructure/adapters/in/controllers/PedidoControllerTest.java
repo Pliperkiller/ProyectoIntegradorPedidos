@@ -203,5 +203,4 @@ public class PedidoControllerTest {
         assertEquals(200, response.getStatusCodeValue());
         assertEquals("API funcionando correctamente", response.getBody());
     }
-
 }
