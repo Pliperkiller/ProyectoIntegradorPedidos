@@ -10,6 +10,7 @@ from src.infrastructure.entrypoints.rest.flask.order_endpoints import OrderEndpo
 from src.infrastructure.entrypoints.rest.controllers.order_controller import OrderController
 from src.infrastructure.adapters.message_broker.rabbitmq_message_broker import RabbitMQMessageBroker
 from src.infrastructure.adapters.message_listener.rabbitmq_message_listener import RabbitMQMessageListener
+from src.infrastructure.entrypoints.rest.swagger_config import swagger_ui_blueprint, register_swagger_routes
 
 
 def start_message_listener(message_listener: RabbitMQMessageListener, queue_name: str):
@@ -46,7 +47,12 @@ def create_app():
     order_controller = OrderController(order_service)
     order_endpoints = OrderEndpoints(order_controller)
 
+    # Registrar blueprints
     app.register_blueprint(order_endpoints.blueprint, url_prefix='/api/v1')
+    app.register_blueprint(swagger_ui_blueprint)
+    
+    # Registrar rutas de Swagger
+    register_swagger_routes(app)
 
     with app.app_context():
         db.create_all()
