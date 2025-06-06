@@ -152,12 +152,12 @@ ProcesarPedidoUseCase
 2. Verifica los endpoints disponibles accediendo a las rutas de Swagger:
    - Pedidos: 
 
-    http://localhost:5000/swagger
+    http://localhost:5000/api/docs
 
 
    - Inventario: 
 
-    http://localhost:8081/swagger-ui.html
+    http://localhost:8081/swagger-ui/index.html
 
 
 
