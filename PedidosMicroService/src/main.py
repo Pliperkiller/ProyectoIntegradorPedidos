@@ -52,7 +52,7 @@ def create_app():
 
     # Registrar blueprints
     app.register_blueprint(order_endpoints.blueprint, url_prefix='/api/v1')
-    app.register_blueprint(swagger_ui_blueprint)
+    app.register_blueprint(swagger_ui_blueprint, url_prefix='/api/docs')
     
     # Registrar rutas de Swagger
     register_swagger_routes(app)
