@@ -7,6 +7,7 @@ from src.domain.entities.factories.order_builder import OrderBuilder
 from src.domain.ports.input.create_order_usecase import CreateOrderUsecase
 from typing_extensions import override
 from typing import List, Dict
+import traceback
 
 
 class CreateOrderUsecaseImpl(CreateOrderUsecase):
@@ -23,29 +24,41 @@ class CreateOrderUsecaseImpl(CreateOrderUsecase):
 
     @override
     def create_order(self, client_id: int, order_items: List[Dict[str, int]]):
-        
-        builder = OrderBuilder()
-        builder.set_client_id(client_id)
+        try:
+            builder = OrderBuilder()
+            builder.set_client_id(client_id)
 
-        items = []
-        for item in order_items:
-            product_id = item['product_id']
-            amount = item['amount']
-            product = self.product_repository.get_by_id(product_id)
-            order_item = OrderItem(product=product, amount=amount)
-            items.append(order_item)
-            builder.add_item(order_item)
+            items = []
+            for item in order_items:
+                product_id = item['product_id']
+                amount = item['amount']
+                product = self.product_repository.get_by_id(product_id)
+                if not product:
+                    raise ValueError(f"Producto con ID {product_id} no encontrado")
+                order_item = OrderItem(product=product, amount=amount)
+                items.append(order_item)
+                builder.add_item(order_item)
 
-        builder.calculate_total()
-        order = builder.build()
-        created_order = self.order_repository.create(order)
+            builder.calculate_total()
+            order = builder.build()
+            created_order = self.order_repository.create(order)
 
-        for item in items:
-            self.order_item_repository.create(created_order.id,item)
+            for item in items:
+                self.order_item_repository.create(created_order.id, item)
 
-        self.message_broker.publish("order_items_queue", 
-                                    {"orderId": created_order.id,
-                                     "items": order_items})
+            try:
+                # Intentar publicar el mensaje, pero continuar si falla
+                self.message_broker.publish("order_items_queue", 
+                                        {"orderId": created_order.id,
+                                         "items": order_items})
+            except Exception as e:
+                print(f"Error al publicar mensaje en RabbitMQ: {str(e)}")
+                print(traceback.format_exc())
+                # Continuar con la ejecución aunque falle RabbitMQ
 
-        return order
+            return order
+        except Exception as e:
+            print(f"Error en create_order: {str(e)}")
+            print(traceback.format_exc())
+            raise
 

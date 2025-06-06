@@ -9,6 +9,7 @@ from src.application.services.order_service import OrderService
 from src.domain.exceptions.invalid_order_data_exception import InvalidOrderDataException
 from src.domain.ports.output.message_broker import MessageBroker
 from typing_extensions import override
+import traceback
 
 
 class OrderServiceImpl(OrderService):
@@ -33,15 +34,20 @@ class OrderServiceImpl(OrderService):
 
     @override
     def create_order(self, client_id, order_items):
-        if not order_items:
-            raise InvalidOrderDataException("Order must have at least one item.")
+        try:
+            if not order_items:
+                raise InvalidOrderDataException("Order must have at least one item.")
 
-        for item in order_items:
-            if item["amount"] <= 0:
-                error_message = f"Invalid amount: {item['amount']} for product {item['product_id']}"
-                raise InvalidOrderDataException(error_message)
-            
-        return self.create_order_usecase.create_order(client_id, order_items)
+            for item in order_items:
+                if item["amount"] <= 0:
+                    error_message = f"Invalid amount: {item['amount']} for product {item['product_id']}"
+                    raise InvalidOrderDataException(error_message)
+                
+            return self.create_order_usecase.create_order(client_id, order_items)
+        except Exception as e:
+            print(f"Error al crear orden: {str(e)}")
+            print(traceback.format_exc())
+            raise
     
     @override
     def delete_order(self, order_id):

@@ -4,6 +4,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: pedidos_microservice_rabbitmq
+    hostname: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -28,6 +29,7 @@ services:
       - "5000:5000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pedidos_db:5432/pedidos_db
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       pedidos_db:
         condition: service_healthy

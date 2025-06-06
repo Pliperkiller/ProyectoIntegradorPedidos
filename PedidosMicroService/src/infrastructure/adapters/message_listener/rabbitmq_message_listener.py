@@ -17,7 +17,13 @@ class RabbitMQMessageListener(MessageListener):
         while True:  # Intentar reconectar indefinidamente
             try:
                 print(f"Conectando a RabbitMQ con URL: {self.rabbitmq_url}")
-                connection = pika.BlockingConnection(pika.URLParameters(self.rabbitmq_url))
+                
+                # Configurar parámetros de conexión con timeout
+                parameters = pika.URLParameters(self.rabbitmq_url)
+                parameters.socket_timeout = 5
+                parameters.connection_attempts = 3
+                
+                connection = pika.BlockingConnection(parameters)
                 print("Conexión establecida.")
                 channel = connection.channel()
 

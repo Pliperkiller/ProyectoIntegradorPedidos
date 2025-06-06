@@ -1,4 +1,5 @@
 import threading
+import time
 
 from flask import Flask
 from src.config import Config
@@ -23,6 +24,8 @@ def start_message_listener(message_listener: RabbitMQMessageListener, queue_name
     listener_thread = threading.Thread(target=run_listener)
     listener_thread.daemon = True
     listener_thread.start()
+    # Dar tiempo para que el hilo se inicie pero no bloquear la aplicación
+    time.sleep(1)
     
 def create_app():
     app = Flask(__name__)
