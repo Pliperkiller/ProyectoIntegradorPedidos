@@ -1,0 +1,162 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  resourceGroupName: 'ProyectoPedidosRG'
+  location: 'eastus'
+  acrName: 'proyectopedidosacr'
+  containerAppEnvName: 'pedidos-env'
+
+stages:
+- stage: Build
+  jobs:
+  - job: BuildImages
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Create Resource Group and ACR'
+      inputs:
+        azureSubscription: 'azure-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az group create --name $(resourceGroupName) --location $(location) || true
+          az acr create --resource-group $(resourceGroupName) --name $(acrName) --sku Basic --admin-enabled true || true
+          az acr login --name $(acrName)
+
+    - task: Docker@2
+      displayName: 'Build and Push Pedidos Image'
+      inputs:
+        containerRegistry: '$(acrName).azurecr.io'
+        repository: 'pedidos-app'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/PedidosMicroService/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)/PedidosMicroService'
+        tags: |
+          latest
+          $(Build.BuildId)
+
+    - task: Docker@2
+      displayName: 'Build and Push Inventario Image'
+      inputs:
+        containerRegistry: '$(acrName).azurecr.io'
+        repository: 'inventario-app'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/InventarioMicroService/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)/InventarioMicroService'
+        tags: |
+          latest
+          $(Build.BuildId)
+
+    - task: AzureCLI@2
+      displayName: 'Push Database and RabbitMQ Images'
+      inputs:
+        azureSubscription: 'azure-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          docker pull postgres:14
+          docker pull mysql:8
+          docker pull rabbitmq:3-management
+          
+          docker tag postgres:14 $(acrName).azurecr.io/pedidos-db:latest
+          docker tag mysql:8 $(acrName).azurecr.io/inventario-db:latest
+          docker tag rabbitmq:3-management $(acrName).azurecr.io/rabbitmq:latest
+          
+          docker push $(acrName).azurecr.io/pedidos-db:latest
+          docker push $(acrName).azurecr.io/inventario-db:latest
+          docker push $(acrName).azurecr.io/rabbitmq:latest
+
+- stage: Deploy
+  dependsOn: Build
+  jobs:
+  - job: DeployContainerApps
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Create Container Apps Environment'
+      inputs:
+        azureSubscription: 'azure-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az containerapp env create \
+            --name $(containerAppEnvName) \
+            --resource-group $(resourceGroupName) \
+            --location $(location) || true
+
+    - task: AzureCLI@2
+      displayName: 'Deploy Services'
+      inputs:
+        azureSubscription: 'azure-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          # Deploy RabbitMQ
+          az containerapp create \
+            --name rabbitmq \
+            --resource-group $(resourceGroupName) \
+            --environment $(containerAppEnvName) \
+            --image $(acrName).azurecr.io/rabbitmq:latest \
+            --registry-server $(acrName).azurecr.io \
+            --ingress internal --target-port 5672 \
+            --env-vars RABBITMQ_DEFAULT_USER=guest RABBITMQ_DEFAULT_PASS=guest \
+            --min-replicas 1 --max-replicas 1 || true
+
+          # Deploy Pedidos DB
+          az containerapp create \
+            --name pedidos-db \
+            --resource-group $(resourceGroupName) \
+            --environment $(containerAppEnvName) \
+            --image $(acrName).azurecr.io/pedidos-db:latest \
+            --registry-server $(acrName).azurecr.io \
+            --ingress internal --target-port 5432 \
+            --env-vars POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=pedidos_db \
+            --min-replicas 1 --max-replicas 1 || true
+
+          # Deploy Inventario DB
+          az containerapp create \
+            --name inventario-db \
+            --resource-group $(resourceGroupName) \
+            --environment $(containerAppEnvName) \
+            --image $(acrName).azurecr.io/inventario-db:latest \
+            --registry-server $(acrName).azurecr.io \
+            --ingress internal --target-port 3306 \
+            --env-vars MYSQL_ROOT_PASSWORD=password MYSQL_DATABASE=bd_inventario MYSQL_USER=usuario_api MYSQL_PASSWORD=password_api \
+            --min-replicas 1 --max-replicas 1 || true
+
+          # Deploy Pedidos App
+          az containerapp create \
+            --name pedidos-app \
+            --resource-group $(resourceGroupName) \
+            --environment $(containerAppEnvName) \
+            --image $(acrName).azurecr.io/pedidos-app:$(Build.BuildId) \
+            --registry-server $(acrName).azurecr.io \
+            --ingress external --target-port 5000 \
+            --env-vars DATABASE_URL=postgresql://postgres:postgres@pedidos-db:5432/pedidos_db \
+            --min-replicas 1 --max-replicas 3 || true
+
+          # Deploy Inventario App
+          az containerapp create \
+            --name inventario-app \
+            --resource-group $(resourceGroupName) \
+            --environment $(containerAppEnvName) \
+            --image $(acrName).azurecr.io/inventario-app:$(Build.BuildId) \
+            --registry-server $(acrName).azurecr.io \
+            --ingress external --target-port 8081 \
+            --env-vars SPRING_DATASOURCE_URL=jdbc:mysql://inventario-db:3306/bd_inventario?allowPublicKeyRetrieval=true&useSSL=false SPRING_DATASOURCE_USERNAME=usuario_api SPRING_DATASOURCE_PASSWORD=password_api \
+            --min-replicas 1 --max-replicas 3 || true
+
+    - task: AzureCLI@2
+      displayName: 'Get Service URLs'
+      inputs:
+        azureSubscription: 'azure-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Pedidos Microservice URL:"
+          az containerapp show --name pedidos-app --resource-group $(resourceGroupName) --query "properties.configuration.ingress.fqdn" --output tsv
+          
+          echo "Inventario Microservice URL:"
+          az containerapp show --name inventario-app --resource-group $(resourceGroupName) --query "properties.configuration.ingress.fqdn" --output tsv
